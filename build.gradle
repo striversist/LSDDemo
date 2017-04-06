@@ -14,6 +14,8 @@ buildscript {
 
 allprojects {
     repositories {
+        // OSS Nexus Snapshots
+        maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
         jcenter()
     }
 }

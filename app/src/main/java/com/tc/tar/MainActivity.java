@@ -1,18 +1,23 @@
 package com.tc.tar;
 
-import android.opengl.GLES10;
-import android.opengl.GLES20;
-import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
+import org.rajawali3d.renderer.Renderer;
+import org.rajawali3d.view.ISurface;
+import org.rajawali3d.view.SurfaceView;
 
-public class MainActivity extends AppCompatActivity implements GLSurfaceView.Renderer {
+
+public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = MainActivity.class.getSimpleName();
-    private GLSurfaceView mGLSurfaceView;
+
+    private FrameLayout mLayout;
+    private SurfaceView mRajawaliSurface;
+    private Renderer mRenderer;
 
     static {
         System.loadLibrary("g2o_core");
@@ -23,49 +28,39 @@ public class MainActivity extends AppCompatActivity implements GLSurfaceView.Ren
         System.loadLibrary("g2o_types_sba");
         System.loadLibrary("g2o_types_sim3");
         System.loadLibrary("g2o_types_slam3d");
-        System.loadLibrary("gnustl_shared");
         System.loadLibrary("LSD");
-        System.loadLibrary("pangolin");
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        mRajawaliSurface = createSurfaceView();
+        mRenderer = createRenderer();
+        applyRenderer();
 
-        init();
+        mLayout = new FrameLayout(this);
+        FrameLayout.LayoutParams childParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams
+                .MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        mLayout.addView(mRajawaliSurface, childParams);
+        setContentView(mLayout);
     }
 
-    private void init() {
-        TARNativeInterface.nativeInit();
-        mGLSurfaceView = new GLSurfaceView(this);
-        mGLSurfaceView.setEGLContextClientVersion(2);
-        mGLSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0);
-        mGLSurfaceView.setPreserveEGLContextOnPause(true);
-        mGLSurfaceView.setRenderer(this);
-//        mGLSurfaceView.setOnTouchListener(this);
-        mGLSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
-        //mGLView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
-        setContentView(mGLSurfaceView);
-
-        registerForContextMenu(mGLSurfaceView);
+    protected SurfaceView createSurfaceView() {
+        SurfaceView view = new SurfaceView(this);
+        view.setFrameRate(60);
+        view.setRenderMode(ISurface.RENDERMODE_WHEN_DIRTY);
+        return view;
     }
 
-    @Override
-    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-        TARNativeInterface.nativeInitGL();
+    protected Renderer createRenderer() {
+        return new LSDRenderer(this);
     }
 
-    @Override
-    public void onSurfaceChanged(GL10 gl, int width, int height) {
-        TARNativeInterface.nativeResize(width, height);
+    protected void applyRenderer() {
+        mRajawaliSurface.setSurfaceRenderer(mRenderer);
     }
 
-    @Override
-    public void onDrawFrame(GL10 gl) {
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        GLES20.glClear(GLES10.GL_COLOR_BUFFER_BIT | GLES10.GL_DEPTH_BUFFER_BIT);
-        TARNativeInterface.nativeRender();
-        mGLSurfaceView.requestRender();
+    public View getView() {
+        return mLayout;
     }
 }
