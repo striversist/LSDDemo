@@ -5,6 +5,8 @@ import android.opengl.GLES20;
 
 import org.rajawali3d.debug.DebugObject3D;
 import org.rajawali3d.materials.Material;
+import org.rajawali3d.math.Matrix4;
+import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
 
 import java.util.Stack;
@@ -98,5 +100,10 @@ public class LSDGridFloor extends DebugObject3D {
         setMaterial(new Material());
         init(true);
         setDrawingMode(GLES20.GL_LINES);
+
+        float[] pose = {0, 0, 1, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 1};
+        Matrix4 poseMatrix = new Matrix4(pose);
+        setPosition(poseMatrix.getTranslation());
+        setOrientation(new Quaternion().fromMatrix(poseMatrix));
     }
 }
