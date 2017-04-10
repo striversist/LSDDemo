@@ -5,6 +5,8 @@ import android.opengl.GLES20;
 import android.util.Log;
 import android.view.MotionEvent;
 
+import com.tc.tar.rajawali.PointCloud;
+
 import org.rajawali3d.Object3D;
 import org.rajawali3d.cameras.ArcballCamera;
 import org.rajawali3d.debug.DebugVisualizer;
@@ -15,6 +17,9 @@ import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.Line3D;
 import org.rajawali3d.renderer.Renderer;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -85,23 +90,30 @@ public class LSDRenderer extends Renderer {
         poseMatrix.setAll(pose);
 
         if (mCameraFrame == null) {
+            float cx = intrinsics[0];
+            float cy = intrinsics[1];
+            float fx = intrinsics[2];
+            float fy = intrinsics[3];
+            int width = resolution[0];
+            int height = resolution[1];
+
             Stack<Vector3> points = new Stack<>();
             points.add(new Vector3(0, 0, 0));
-            points.add(new Vector3(0.05 * (0 - intrinsics[0]) / intrinsics[2], 0.05 * (0 - intrinsics[1]) / intrinsics[3], 0.05));
+            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
             points.add(new Vector3(0, 0, 0));
-            points.add(new Vector3(0.05 * (0 - intrinsics[0]) / intrinsics[2], 0.05 * (resolution[1] - 1 - intrinsics[1]) / intrinsics[3], 0.05));
+            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
             points.add(new Vector3(0, 0, 0));
-            points.add(new Vector3(0.05 * (resolution[0] - 1 - intrinsics[0]) / intrinsics[2], 0.05 * (resolution[1] - 1 - intrinsics[1]) / intrinsics[3], 0.05));
+            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
             points.add(new Vector3(0, 0, 0));
-            points.add(new Vector3(0.05 * (resolution[0] - 1 - intrinsics[0]) / intrinsics[2], 0.05 * (0 - intrinsics[1]) / intrinsics[3], 0.05));
-            points.add(new Vector3(0.05 * (resolution[0] - 1 - intrinsics[0]) / intrinsics[2], 0.05 * (0 - intrinsics[1]) / intrinsics[3], 0.05));
-            points.add(new Vector3(0.05 * (resolution[0] - 1 - intrinsics[0]) / intrinsics[2], 0.05 * (resolution[1] - 1 - intrinsics[1]) / intrinsics[3], 0.05));
-            points.add(new Vector3(0.05 * (resolution[0] - 1 - intrinsics[0]) / intrinsics[2], 0.05 * (resolution[1] - 1 - intrinsics[1]) / intrinsics[3], 0.05));
-            points.add(new Vector3(0.05 * (0 - intrinsics[0]) / intrinsics[2], 0.05 * (resolution[1] - 1 - intrinsics[1]) / intrinsics[3], 0.05));
-            points.add(new Vector3(0.05 * (0 - intrinsics[0]) / intrinsics[2], 0.05 * (resolution[1] - 1 - intrinsics[1]) / intrinsics[3], 0.05));
-            points.add(new Vector3(0.05 * (0 - intrinsics[0]) / intrinsics[2], 0.05 * (0 - intrinsics[1]) / intrinsics[3], 0.05));
-            points.add(new Vector3(0.05 * (0 - intrinsics[0]) / intrinsics[2], 0.05 * (0 - intrinsics[1]) / intrinsics[3], 0.05));
-            points.add(new Vector3(0.05 * (resolution[0] - 1 - intrinsics[0]) / intrinsics[2], 0.05 * (0 - intrinsics[1]) / intrinsics[3], 0.05));
+            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
+            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
+            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
+            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
+            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
+            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
+            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
+            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
+            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
 
             Line3D line = new Line3D(points, 1);
             line.setColor(0xff0000);
@@ -113,17 +125,42 @@ public class LSDRenderer extends Renderer {
         mCameraFrame.setPosition(poseMatrix.getTranslation());
         mCameraFrame.setOrientation(new Quaternion().fromMatrix(poseMatrix));
     }
+
     private void drawKeyframes() {
-        drawPoints();
-        drawCamera();
-    }
-
-    private void drawPoints() {
-
-    }
-
-    private void drawCamera() {
         float allPose[] = TARNativeInterface.nativeGetAllKeyFramePose();
+        drawPoints(allPose);
+        drawCamera(allPose);
+    }
+
+    private void drawPoints(float[] allPose) {
+        int num = allPose.length / 16;
+        if (num > mAllCameraFrames.size()) {
+            float pose[] = Arrays.copyOfRange(allPose, 0, 16);
+            Matrix4 poseMatrix = new Matrix4();
+            poseMatrix.setAll(pose);
+
+            int pointNum = 100;
+            PointCloud pointCloud = new PointCloud(pointNum, 3);
+            float[] vertices = new float[pointNum * 3];
+            for (int i = 0; i < pointNum; ++i) {
+                vertices[i * 3] = (float) (Math.sin(i * 0.1f));
+                vertices[1 + i * 3] = (float) (Math.sin(i * 0.1f));
+                vertices[2 + i * 3] = 0.0f + i * 0.1f;
+            }
+            ByteBuffer byteBuf = ByteBuffer.allocateDirect(vertices.length * 4); //4 bytes per float
+            byteBuf.order(ByteOrder.nativeOrder());
+            FloatBuffer buffer = byteBuf.asFloatBuffer();
+            buffer.put(vertices);
+            buffer.position(0);
+            pointCloud.updateCloud(pointNum, buffer);
+            pointCloud.setPosition(poseMatrix.getTranslation());
+            pointCloud.setOrientation(new Quaternion().fromMatrix(poseMatrix));
+
+            getCurrentScene().addChild(pointCloud);
+        }
+    }
+
+    private void drawCamera(float[] allPose) {
         int num = allPose.length / 16;
         if (num > mAllCameraFrames.size()) {
             for (Object3D obj : mAllCameraFrames) {
@@ -160,7 +197,7 @@ public class LSDRenderer extends Renderer {
                 points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
                 points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
 
-                Line3D line = new Line3D(points, 1);
+                Line3D line = new Line3D(points, 2);
                 line.setColor(0xff0000);
                 line.setMaterial(new Material());
                 line.setDrawingMode(GLES20.GL_LINES);
