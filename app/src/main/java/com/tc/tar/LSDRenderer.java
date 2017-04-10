@@ -2,7 +2,6 @@ package com.tc.tar;
 
 import android.content.Context;
 import android.opengl.GLES20;
-import android.util.Log;
 import android.view.MotionEvent;
 
 import com.tc.tar.rajawali.PointCloud;
@@ -22,7 +21,6 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Stack;
 
 /**
@@ -85,41 +83,11 @@ public class LSDRenderer extends Renderer {
     }
 
     private void drawFrustum() {
-        float pose[] = TARNativeInterface.nativeGetPose();
+        float pose[] = TARNativeInterface.nativeGetCurrentPose();
         Matrix4 poseMatrix = new Matrix4();
         poseMatrix.setAll(pose);
-
         if (mCameraFrame == null) {
-            float cx = intrinsics[0];
-            float cy = intrinsics[1];
-            float fx = intrinsics[2];
-            float fy = intrinsics[3];
-            int width = resolution[0];
-            int height = resolution[1];
-
-            Stack<Vector3> points = new Stack<>();
-            points.add(new Vector3(0, 0, 0));
-            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-            points.add(new Vector3(0, 0, 0));
-            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-            points.add(new Vector3(0, 0, 0));
-            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-            points.add(new Vector3(0, 0, 0));
-            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-            points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-            points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-
-            Line3D line = new Line3D(points, 1);
-            line.setColor(0xff0000);
-            line.setMaterial(new Material());
-            line.setDrawingMode(GLES20.GL_LINES);
-            mCameraFrame = line;
+            mCameraFrame = createCameraFrame(0xff0000, 1);
             getCurrentScene().addChild(mCameraFrame);
         }
         mCameraFrame.setPosition(poseMatrix.getTranslation());
@@ -127,7 +95,7 @@ public class LSDRenderer extends Renderer {
     }
 
     private void drawKeyframes() {
-        float allPose[] = TARNativeInterface.nativeGetAllKeyFramePose();
+        float allPose[] = TARNativeInterface.nativeGetAllKeyFramePoses();
         drawPoints(allPose);
         drawCamera(allPose);
     }
@@ -167,45 +135,49 @@ public class LSDRenderer extends Renderer {
                 getCurrentScene().removeChild(obj);
             }
             mAllCameraFrames.clear();
-
-            float cx = intrinsics[0];
-            float cy = intrinsics[1];
-            float fx = intrinsics[2];
-            float fy = intrinsics[3];
-            int width = resolution[0];
-            int height = resolution[1];
             for (int i = 0; i < num; ++i) {
                 float pose[] = Arrays.copyOfRange(allPose, i * 16, i * 16 + 16);
                 Matrix4 poseMatrix = new Matrix4();
                 poseMatrix.setAll(pose);
-
-                Stack<Vector3> points = new Stack<>();
-                points.add(new Vector3(0, 0, 0));
-                points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-                points.add(new Vector3(0, 0, 0));
-                points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-                points.add(new Vector3(0, 0, 0));
-                points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-                points.add(new Vector3(0, 0, 0));
-                points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-                points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-                points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-                points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-                points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-                points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
-                points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-                points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-                points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
-
-                Line3D line = new Line3D(points, 2);
-                line.setColor(0xff0000);
-                line.setMaterial(new Material());
-                line.setDrawingMode(GLES20.GL_LINES);
+                Line3D line = createCameraFrame(0xff0000, 2);
                 line.setPosition(poseMatrix.getTranslation());
                 line.setOrientation(new Quaternion().fromMatrix(poseMatrix));
                 mAllCameraFrames.add(line);
             }
             getCurrentScene().addChildren(mAllCameraFrames);
         }
+    }
+
+    private Line3D createCameraFrame(int color, int thickness) {
+        float cx = intrinsics[0];
+        float cy = intrinsics[1];
+        float fx = intrinsics[2];
+        float fy = intrinsics[3];
+        int width = resolution[0];
+        int height = resolution[1];
+
+        Stack<Vector3> points = new Stack<>();
+        points.add(new Vector3(0, 0, 0));
+        points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
+        points.add(new Vector3(0, 0, 0));
+        points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
+        points.add(new Vector3(0, 0, 0));
+        points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
+        points.add(new Vector3(0, 0, 0));
+        points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
+        points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
+        points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
+        points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
+        points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
+        points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (height - 1 - cy) / fy, 0.05));
+        points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
+        points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
+        points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
+
+        Line3D frame = new Line3D(points, thickness);
+        frame.setColor(color);
+        frame.setMaterial(new Material());
+        frame.setDrawingMode(GLES20.GL_LINES);
+        return frame;
     }
 }

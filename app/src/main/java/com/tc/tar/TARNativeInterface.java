@@ -15,6 +15,6 @@ public class TARNativeInterface {
     public static native void nativeKey(int keycode);
     public static native float[] nativeGetIntrinsics();
     public static native int[] nativeGetResolution();
-    public static native float[] nativeGetPose();
-    public static native float[] nativeGetAllKeyFramePose();
+    public static native float[] nativeGetCurrentPose();
+    public static native float[] nativeGetAllKeyFramePoses();
 }
