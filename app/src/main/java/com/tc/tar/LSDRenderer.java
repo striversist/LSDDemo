@@ -2,6 +2,7 @@ package com.tc.tar;
 
 import android.content.Context;
 import android.opengl.GLES20;
+import android.util.Log;
 import android.view.MotionEvent;
 
 import com.tc.tar.rajawali.PointCloud;
@@ -32,8 +33,10 @@ public class LSDRenderer extends Renderer {
     private float intrinsics[];
     private int resolution[];
     private boolean mHasSleep = false;
-    private Object3D mCameraFrame;
-    private ArrayList<Object3D> mAllCameraFrames = new ArrayList<>();
+    private Object3D mCurrentCameraFrame;
+    private ArrayList<Object3D> mCameraFrames = new ArrayList<>();
+    private int mLastKeyFrameCount;
+    private ArrayList<Object3D> mPointClouds = new ArrayList<>();
 
     public LSDRenderer(Context context) {
         super(context);
@@ -86,36 +89,41 @@ public class LSDRenderer extends Renderer {
         float pose[] = TARNativeInterface.nativeGetCurrentPose();
         Matrix4 poseMatrix = new Matrix4();
         poseMatrix.setAll(pose);
-        if (mCameraFrame == null) {
-            mCameraFrame = createCameraFrame(0xff0000, 1);
-            getCurrentScene().addChild(mCameraFrame);
+        if (mCurrentCameraFrame == null) {
+            mCurrentCameraFrame = createCameraFrame(0xff0000, 1);
+            getCurrentScene().addChild(mCurrentCameraFrame);
         }
-        mCameraFrame.setPosition(poseMatrix.getTranslation());
-        mCameraFrame.setOrientation(new Quaternion().fromMatrix(poseMatrix));
+        mCurrentCameraFrame.setPosition(poseMatrix.getTranslation());
+        mCurrentCameraFrame.setOrientation(new Quaternion().fromMatrix(poseMatrix));
     }
 
     private void drawKeyframes() {
-        float allPose[] = TARNativeInterface.nativeGetAllKeyFramePoses();
-        drawPoints(allPose);
-        drawCamera(allPose);
+        int currentKeyFrameCount = TARNativeInterface.nativeGetKeyFrameCount();
+        if (mLastKeyFrameCount < currentKeyFrameCount) {
+            LSDKeyFrame[] keyFrames = TARNativeInterface.nativeGetAllKeyFrames();
+            if (keyFrames == null || keyFrames.length == 0) {
+                return;
+            }
+
+            float allPose[] = getAllPose(keyFrames);
+            drawPoints(keyFrames);
+            drawCamera(allPose);
+
+            mLastKeyFrameCount = currentKeyFrameCount;
+        }
     }
 
-    private void drawPoints(float[] allPose) {
-        int num = allPose.length / 16;
-        if (num > mAllCameraFrames.size()) {
-            float pose[] = Arrays.copyOfRange(allPose, 0, 16);
+    private void drawPoints(LSDKeyFrame[] keyFrames) {
+        ArrayList<Object3D> pointClouds = new ArrayList<>();
+        for (LSDKeyFrame keyFrame : keyFrames) {
+            float pose[] = keyFrame.pose;
             Matrix4 poseMatrix = new Matrix4();
             poseMatrix.setAll(pose);
 
-            int pointNum = 100;
+            int pointNum = keyFrame.pointCount;
+            float[] vertices = keyFrame.points;
             PointCloud pointCloud = new PointCloud(pointNum, 3);
-            float[] vertices = new float[pointNum * 3];
-            for (int i = 0; i < pointNum; ++i) {
-                vertices[i * 3] = (float) (Math.sin(i * 0.1f));
-                vertices[1 + i * 3] = (float) (Math.sin(i * 0.1f));
-                vertices[2 + i * 3] = 0.0f + i * 0.1f;
-            }
-            ByteBuffer byteBuf = ByteBuffer.allocateDirect(vertices.length * 4); //4 bytes per float
+            ByteBuffer byteBuf = ByteBuffer.allocateDirect(vertices.length * 4); // 4 bytes per float
             byteBuf.order(ByteOrder.nativeOrder());
             FloatBuffer buffer = byteBuf.asFloatBuffer();
             buffer.put(vertices);
@@ -123,18 +131,34 @@ public class LSDRenderer extends Renderer {
             pointCloud.updateCloud(pointNum, buffer);
             pointCloud.setPosition(poseMatrix.getTranslation());
             pointCloud.setOrientation(new Quaternion().fromMatrix(poseMatrix));
-
-            getCurrentScene().addChild(pointCloud);
+            pointClouds.add(pointCloud);
         }
+
+        for (Object3D obj : mPointClouds) {
+            getCurrentScene().removeChild(obj);
+        }
+        mPointClouds = pointClouds;
+        getCurrentScene().addChildren(mPointClouds);
+    }
+
+    private float[] getAllPose(LSDKeyFrame[] keyframes) {
+        float allPose[] = new float[keyframes.length * 16];
+        int offset = 0;
+        for (LSDKeyFrame keyFrame : keyframes) {
+            Log.d(TAG, "keyframes.length=" + keyframes.length + ", keyFrame.pose=" + keyFrame.pose);
+            System.arraycopy(keyFrame.pose, 0, allPose, offset, keyFrame.pose.length);
+            offset += keyFrame.pose.length;
+        }
+        return allPose;
     }
 
     private void drawCamera(float[] allPose) {
         int num = allPose.length / 16;
-        if (num > mAllCameraFrames.size()) {
-            for (Object3D obj : mAllCameraFrames) {
+        if (num > mCameraFrames.size()) {
+            for (Object3D obj : mCameraFrames) {
                 getCurrentScene().removeChild(obj);
             }
-            mAllCameraFrames.clear();
+            mCameraFrames.clear();
             for (int i = 0; i < num; ++i) {
                 float pose[] = Arrays.copyOfRange(allPose, i * 16, i * 16 + 16);
                 Matrix4 poseMatrix = new Matrix4();
@@ -142,9 +166,9 @@ public class LSDRenderer extends Renderer {
                 Line3D line = createCameraFrame(0xff0000, 2);
                 line.setPosition(poseMatrix.getTranslation());
                 line.setOrientation(new Quaternion().fromMatrix(poseMatrix));
-                mAllCameraFrames.add(line);
+                mCameraFrames.add(line);
             }
-            getCurrentScene().addChildren(mAllCameraFrames);
+            getCurrentScene().addChildren(mCameraFrames);
         }
     }
 

@@ -17,4 +17,6 @@ public class TARNativeInterface {
     public static native int[] nativeGetResolution();
     public static native float[] nativeGetCurrentPose();
     public static native float[] nativeGetAllKeyFramePoses();
+    public static native LSDKeyFrame[] nativeGetAllKeyFrames();
+    public static native int nativeGetKeyFrameCount();
 }
