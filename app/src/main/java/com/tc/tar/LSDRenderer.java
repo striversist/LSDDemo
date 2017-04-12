@@ -2,7 +2,6 @@ package com.tc.tar;
 
 import android.content.Context;
 import android.opengl.GLES20;
-import android.util.Log;
 import android.view.MotionEvent;
 
 import com.tc.tar.rajawali.PointCloud;
@@ -129,7 +128,7 @@ public class LSDRenderer extends Renderer {
             poseMatrix.setAll(pose);
 
             int pointNum = keyFrame.pointCount;
-            float[] vertices = keyFrame.points;
+            float[] vertices = keyFrame.worldPoints;
             PointCloud pointCloud = new PointCloud(pointNum, 3);
             ByteBuffer byteBuf = ByteBuffer.allocateDirect(vertices.length * 4); // 4 bytes per float
             byteBuf.order(ByteOrder.nativeOrder());
@@ -137,8 +136,6 @@ public class LSDRenderer extends Renderer {
             buffer.put(vertices);
             buffer.position(0);
             pointCloud.updateCloud(pointNum, buffer, keyFrame.colors);
-            pointCloud.setPosition(poseMatrix.getTranslation());
-            pointCloud.setOrientation(new Quaternion().fromMatrix(poseMatrix));
             mPointClouds.add(pointCloud);
         }
         getCurrentScene().addChildren(mPointClouds);

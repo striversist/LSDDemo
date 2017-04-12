@@ -7,6 +7,6 @@ package com.tc.tar;
 public class LSDKeyFrame {
     float[] pose;
     int pointCount;
-    float[] points;     // 3 float per point
-    int[] colors;       // 1 int per point
+    float[] worldPoints;    // 3 float per point, world coordinate(NOTE!!)
+    int[] colors;           // 1 int per point
 }
