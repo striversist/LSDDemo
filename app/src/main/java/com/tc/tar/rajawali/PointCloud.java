@@ -52,6 +52,18 @@ public class PointCloud extends Points {
         updatePoints(pointCount, pointBuffer, mColorArray);
     }
 
+    public void updateCloud(int pointCount, FloatBuffer pointBuffer, int[] colors) {
+        int color;
+        for (int i = 0; i < pointCount; i++) {
+            color = colors[i];
+            mColorArray[i * 4] = Color.red(color) / 255f;
+            mColorArray[i * 4 + 1] = Color.green(color) / 255f;
+            mColorArray[i * 4 + 2] = Color.blue(color) / 255f;
+            mColorArray[i * 4 + 3] = Color.alpha(color) / 255f;
+        }
+        updatePoints(pointCount, pointBuffer, mColorArray);
+    }
+
     /**
      * Pre-calculate a palette to be used to translate between point distance and RGB color.
      */

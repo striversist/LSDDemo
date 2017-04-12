@@ -30,6 +30,9 @@ import java.util.Stack;
 
 public class LSDRenderer extends Renderer {
     public static final String TAG = LSDRenderer.class.getSimpleName();
+    private static final float CAMERA_NEAR = 0.01f;
+    private static final float CAMERA_FAR = 200f;
+
     private float intrinsics[];
     private int resolution[];
     private boolean mHasSleep = false;
@@ -52,6 +55,9 @@ public class LSDRenderer extends Renderer {
         ArcballCamera arcball = new ArcballCamera(mContext, ((MainActivity)mContext).getView());
         arcball.setPosition(0, 0, 4);
         getCurrentScene().replaceAndSwitchCamera(getCurrentCamera(), arcball);
+        getCurrentCamera().setNearPlane(CAMERA_NEAR);
+        getCurrentCamera().setFarPlane(CAMERA_FAR);
+        getCurrentCamera().setFieldOfView(37.5);
     }
 
     @Override
@@ -105,16 +111,18 @@ public class LSDRenderer extends Renderer {
                 return;
             }
 
-            float allPose[] = getAllPose(keyFrames);
             drawPoints(keyFrames);
-            drawCamera(allPose);
+            drawCamera(keyFrames);
 
             mLastKeyFrameCount = currentKeyFrameCount;
         }
     }
 
     private void drawPoints(LSDKeyFrame[] keyFrames) {
-        ArrayList<Object3D> pointClouds = new ArrayList<>();
+        for (Object3D obj : mPointClouds) {
+            getCurrentScene().removeChild(obj);
+        }
+        mPointClouds.clear();
         for (LSDKeyFrame keyFrame : keyFrames) {
             float pose[] = keyFrame.pose;
             Matrix4 poseMatrix = new Matrix4();
@@ -128,16 +136,11 @@ public class LSDRenderer extends Renderer {
             FloatBuffer buffer = byteBuf.asFloatBuffer();
             buffer.put(vertices);
             buffer.position(0);
-            pointCloud.updateCloud(pointNum, buffer);
+            pointCloud.updateCloud(pointNum, buffer, keyFrame.colors);
             pointCloud.setPosition(poseMatrix.getTranslation());
             pointCloud.setOrientation(new Quaternion().fromMatrix(poseMatrix));
-            pointClouds.add(pointCloud);
+            mPointClouds.add(pointCloud);
         }
-
-        for (Object3D obj : mPointClouds) {
-            getCurrentScene().removeChild(obj);
-        }
-        mPointClouds = pointClouds;
         getCurrentScene().addChildren(mPointClouds);
     }
 
@@ -145,31 +148,28 @@ public class LSDRenderer extends Renderer {
         float allPose[] = new float[keyframes.length * 16];
         int offset = 0;
         for (LSDKeyFrame keyFrame : keyframes) {
-            Log.d(TAG, "keyframes.length=" + keyframes.length + ", keyFrame.pose=" + keyFrame.pose);
             System.arraycopy(keyFrame.pose, 0, allPose, offset, keyFrame.pose.length);
             offset += keyFrame.pose.length;
         }
         return allPose;
     }
 
-    private void drawCamera(float[] allPose) {
-        int num = allPose.length / 16;
-        if (num > mCameraFrames.size()) {
-            for (Object3D obj : mCameraFrames) {
-                getCurrentScene().removeChild(obj);
-            }
-            mCameraFrames.clear();
-            for (int i = 0; i < num; ++i) {
-                float pose[] = Arrays.copyOfRange(allPose, i * 16, i * 16 + 16);
-                Matrix4 poseMatrix = new Matrix4();
-                poseMatrix.setAll(pose);
-                Line3D line = createCameraFrame(0xff0000, 2);
-                line.setPosition(poseMatrix.getTranslation());
-                line.setOrientation(new Quaternion().fromMatrix(poseMatrix));
-                mCameraFrames.add(line);
-            }
-            getCurrentScene().addChildren(mCameraFrames);
+    private void drawCamera(LSDKeyFrame[] keyFrames) {
+        float allPose[] = getAllPose(keyFrames);
+        for (Object3D obj : mCameraFrames) {
+            getCurrentScene().removeChild(obj);
         }
+        mCameraFrames.clear();
+        for (int i = 0; i < keyFrames.length; ++i) {
+            float pose[] = Arrays.copyOfRange(allPose, i * 16, i * 16 + 16);
+            Matrix4 poseMatrix = new Matrix4();
+            poseMatrix.setAll(pose);
+            Line3D line = createCameraFrame(0xff0000, 2);
+            line.setPosition(poseMatrix.getTranslation());
+            line.setOrientation(new Quaternion().fromMatrix(poseMatrix));
+            mCameraFrames.add(line);
+        }
+        getCurrentScene().addChildren(mCameraFrames);
     }
 
     private Line3D createCameraFrame(int color, int thickness) {
