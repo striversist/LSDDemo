@@ -1,8 +1,11 @@
 package com.tc.tar;
 
+import android.app.Activity;
 import android.content.Context;
 import android.opengl.GLES20;
+import android.util.Log;
 import android.view.MotionEvent;
+import android.widget.Toast;
 
 import com.tc.tar.rajawali.PointCloud;
 
@@ -31,13 +34,15 @@ public class LSDRenderer extends Renderer {
     public static final String TAG = LSDRenderer.class.getSimpleName();
     private static final float CAMERA_NEAR = 0.01f;
     private static final float CAMERA_FAR = 200f;
+    private static final int MAX_POINTS = 500000;
 
     private float intrinsics[];
     private int resolution[];
     private Object3D mCurrentCameraFrame;
     private ArrayList<Object3D> mCameraFrames = new ArrayList<>();
     private int mLastKeyFrameCount;
-    private Object3D mPointCloud;
+    private PointCloud mPointCloud;
+    private boolean mHasPointCloudAdded;
 
     public LSDRenderer(Context context) {
         super(context);
@@ -49,13 +54,14 @@ public class LSDRenderer extends Renderer {
         intrinsics = TARNativeInterface.nativeGetIntrinsics();
         resolution = TARNativeInterface.nativeGetResolution();
 
-        drawGrid();
         ArcballCamera arcball = new ArcballCamera(mContext, ((MainActivity)mContext).getView());
         arcball.setPosition(0, 0, 4);
         getCurrentScene().replaceAndSwitchCamera(getCurrentCamera(), arcball);
         getCurrentCamera().setNearPlane(CAMERA_NEAR);
         getCurrentCamera().setFarPlane(CAMERA_FAR);
         getCurrentCamera().setFieldOfView(37.5);
+
+        drawGrid();
     }
 
     @Override
@@ -121,21 +127,28 @@ public class LSDRenderer extends Renderer {
             pointNum += keyFrame.pointCount;
         }
 
-        PointCloud pointCloud = new PointCloud(pointNum, 3);
+        if (!mHasPointCloudAdded) {
+            mPointCloud = new PointCloud(MAX_POINTS, 3); // 1+ phone maximum value
+            getCurrentScene().addChild(mPointCloud);
+            mHasPointCloudAdded = true;
+        }
+
+        if (pointNum >= MAX_POINTS) {
+            ((MainActivity)mContext).runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(mContext, "警告：点云超过最大值(" + MAX_POINTS + ")!!", Toast.LENGTH_LONG).show();
+                }
+            });
+            return;
+        }
+
         ByteBuffer byteBuf = ByteBuffer.allocateDirect(vertices.length * 4); // 4 bytes per float
         byteBuf.order(ByteOrder.nativeOrder());
         FloatBuffer buffer = byteBuf.asFloatBuffer();
         buffer.put(vertices);
         buffer.position(0);
-        pointCloud.updateCloud(pointNum, buffer, colors);
-
-        if (mPointCloud == null) {
-            mPointCloud = pointCloud;
-            getCurrentScene().addChild(mPointCloud);
-        } else {
-            getCurrentScene().replaceChild(mPointCloud, pointCloud);
-            mPointCloud = pointCloud;
-        }
+        mPointCloud.updateCloud(pointNum, buffer, colors);
     }
 
     private void drawCamera(LSDKeyFrame[] keyFrames) {
