@@ -8,7 +8,6 @@ import com.tc.tar.rajawali.PointCloud;
 
 import org.rajawali3d.Object3D;
 import org.rajawali3d.cameras.ArcballCamera;
-import org.rajawali3d.debug.DebugVisualizer;
 import org.rajawali3d.materials.Material;
 import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.math.Quaternion;
@@ -35,7 +34,6 @@ public class LSDRenderer extends Renderer {
 
     private float intrinsics[];
     private int resolution[];
-    private boolean mHasSleep = false;
     private Object3D mCurrentCameraFrame;
     private ArrayList<Object3D> mCameraFrames = new ArrayList<>();
     private int mLastKeyFrameCount;
@@ -73,22 +71,12 @@ public class LSDRenderer extends Renderer {
     @Override
     protected void onRender(long ellapsedRealtime, double deltaTime) {
         super.onRender(ellapsedRealtime, deltaTime);
-        if (!mHasSleep) {
-            try {
-                Thread.sleep(1000);
-                mHasSleep = true;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        drawKeyframes();
         drawFrustum();
+        drawKeyframes();
     }
 
     private void drawGrid() {
-        DebugVisualizer debugViz = new DebugVisualizer(this);
-        debugViz.addChild(new LSDGridFloor());
-        getCurrentScene().addChild(debugViz);
+        getCurrentScene().addChildren(new LSDGridFloor().createGridFloor());
     }
 
     private void drawFrustum() {
@@ -143,22 +131,11 @@ public class LSDRenderer extends Renderer {
 
         if (mPointCloud == null) {
             mPointCloud = pointCloud;
+            getCurrentScene().addChild(mPointCloud);
         } else {
-            getCurrentScene().removeChild(mPointCloud);
+            getCurrentScene().replaceChild(mPointCloud, pointCloud);
             mPointCloud = pointCloud;
         }
-
-        getCurrentScene().addChild(mPointCloud);
-    }
-
-    private float[] getAllPose(LSDKeyFrame[] keyframes) {
-        float allPose[] = new float[keyframes.length * 16];
-        int offset = 0;
-        for (LSDKeyFrame keyFrame : keyframes) {
-            System.arraycopy(keyFrame.pose, 0, allPose, offset, keyFrame.pose.length);
-            offset += keyFrame.pose.length;
-        }
-        return allPose;
     }
 
     private void drawCamera(LSDKeyFrame[] keyFrames) {
@@ -177,6 +154,16 @@ public class LSDRenderer extends Renderer {
             mCameraFrames.add(line);
         }
         getCurrentScene().addChildren(mCameraFrames);
+    }
+
+    private float[] getAllPose(LSDKeyFrame[] keyframes) {
+        float allPose[] = new float[keyframes.length * 16];
+        int offset = 0;
+        for (LSDKeyFrame keyFrame : keyframes) {
+            System.arraycopy(keyFrame.pose, 0, allPose, offset, keyFrame.pose.length);
+            offset += keyFrame.pose.length;
+        }
+        return allPose;
     }
 
     private Line3D createCameraFrame(int color, int thickness) {
@@ -205,8 +192,7 @@ public class LSDRenderer extends Renderer {
         points.add(new Vector3(0.05 * (0 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
         points.add(new Vector3(0.05 * (width - 1 - cx) / fx, 0.05 * (0 - cy) / fy, 0.05));
 
-        Line3D frame = new Line3D(points, thickness);
-        frame.setColor(color);
+        Line3D frame = new Line3D(points, thickness, color);
         frame.setMaterial(new Material());
         frame.setDrawingMode(GLES20.GL_LINES);
         return frame;
