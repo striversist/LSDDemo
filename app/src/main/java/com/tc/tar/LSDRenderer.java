@@ -15,6 +15,7 @@ import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.Line3D;
 import org.rajawali3d.renderer.Renderer;
+import org.rajawali3d.util.ArrayUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -38,7 +39,7 @@ public class LSDRenderer extends Renderer {
     private Object3D mCurrentCameraFrame;
     private ArrayList<Object3D> mCameraFrames = new ArrayList<>();
     private int mLastKeyFrameCount;
-    private ArrayList<Object3D> mPointClouds = new ArrayList<>();
+    private Object3D mPointCloud;
 
     public LSDRenderer(Context context) {
         super(context);
@@ -118,27 +119,36 @@ public class LSDRenderer extends Renderer {
     }
 
     private void drawPoints(LSDKeyFrame[] keyFrames) {
-        for (Object3D obj : mPointClouds) {
-            getCurrentScene().removeChild(obj);
-        }
-        mPointClouds.clear();
+        float[] vertices = null;
+        int[] colors = null;
+        int pointNum = 0;
         for (LSDKeyFrame keyFrame : keyFrames) {
-            float pose[] = keyFrame.pose;
-            Matrix4 poseMatrix = new Matrix4();
-            poseMatrix.setAll(pose);
-
-            int pointNum = keyFrame.pointCount;
-            float[] vertices = keyFrame.worldPoints;
-            PointCloud pointCloud = new PointCloud(pointNum, 3);
-            ByteBuffer byteBuf = ByteBuffer.allocateDirect(vertices.length * 4); // 4 bytes per float
-            byteBuf.order(ByteOrder.nativeOrder());
-            FloatBuffer buffer = byteBuf.asFloatBuffer();
-            buffer.put(vertices);
-            buffer.position(0);
-            pointCloud.updateCloud(pointNum, buffer, keyFrame.colors);
-            mPointClouds.add(pointCloud);
+            if (vertices == null) {
+                vertices = keyFrame.worldPoints;
+                colors = keyFrame.colors;
+            } else {
+                vertices = ArrayUtils.concatAllFloat(vertices, keyFrame.worldPoints);
+                colors = ArrayUtils.concatAllInt(colors, keyFrame.colors);
+            }
+            pointNum += keyFrame.pointCount;
         }
-        getCurrentScene().addChildren(mPointClouds);
+
+        PointCloud pointCloud = new PointCloud(pointNum, 3);
+        ByteBuffer byteBuf = ByteBuffer.allocateDirect(vertices.length * 4); // 4 bytes per float
+        byteBuf.order(ByteOrder.nativeOrder());
+        FloatBuffer buffer = byteBuf.asFloatBuffer();
+        buffer.put(vertices);
+        buffer.position(0);
+        pointCloud.updateCloud(pointNum, buffer, colors);
+
+        if (mPointCloud == null) {
+            mPointCloud = pointCloud;
+        } else {
+            getCurrentScene().removeChild(mPointCloud);
+            mPointCloud = pointCloud;
+        }
+
+        getCurrentScene().addChild(mPointCloud);
     }
 
     private float[] getAllPose(LSDKeyFrame[] keyframes) {
