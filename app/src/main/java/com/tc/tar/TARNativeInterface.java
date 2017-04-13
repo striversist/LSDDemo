@@ -7,7 +7,7 @@ package com.tc.tar;
 public class TARNativeInterface {
     public static final String TAG = TARNativeInterface.class.getSimpleName();
 
-    public static native void nativeInit();
+    public static native void nativeInit(String calibPath);
     public static native void nativeDestroy();
     public static native void nativeInitGL();
     public static native void nativeResize(int w, int h);
