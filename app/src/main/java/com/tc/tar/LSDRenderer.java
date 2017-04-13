@@ -60,7 +60,7 @@ public class LSDRenderer extends Renderer {
         resolution = TARNativeInterface.nativeGetResolution();
 
         ArcballCamera arcball = new ArcballCamera(mContext, ((MainActivity)mContext).getView());
-        arcball.setPosition(0, 0, 4);
+        arcball.setPosition(0, -4, 0);
         getCurrentScene().replaceAndSwitchCamera(getCurrentCamera(), arcball);
         getCurrentCamera().setNearPlane(CAMERA_NEAR);
         getCurrentCamera().setFarPlane(CAMERA_FAR);
