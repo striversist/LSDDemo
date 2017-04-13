@@ -43,6 +43,11 @@ public class LSDRenderer extends Renderer {
     private int mLastKeyFrameCount;
     private PointCloud mPointCloud;
     private boolean mHasPointCloudAdded;
+    private RenderListener mRenderListener;
+
+    public interface RenderListener {
+        void onRender();
+    }
 
     public LSDRenderer(Context context) {
         super(context);
@@ -79,6 +84,13 @@ public class LSDRenderer extends Renderer {
         super.onRender(ellapsedRealtime, deltaTime);
         drawFrustum();
         drawKeyframes();
+        if (mRenderListener != null) {
+            mRenderListener.onRender();
+        }
+    }
+
+    public void setRenderListener(RenderListener listener) {
+        mRenderListener = listener;
     }
 
     private void drawGrid() {
