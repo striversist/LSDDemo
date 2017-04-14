@@ -1,9 +1,7 @@
 package com.tc.tar;
 
-import android.app.Activity;
 import android.content.Context;
 import android.opengl.GLES20;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.Toast;
 
@@ -55,7 +53,7 @@ public class LSDRenderer extends Renderer {
 
     @Override
     protected void initScene() {
-        TARNativeInterface.nativeInitGL();
+        TARNativeInterface.nativeStart();
         intrinsics = TARNativeInterface.nativeGetIntrinsics();
         resolution = TARNativeInterface.nativeGetResolution();
 

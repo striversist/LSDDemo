@@ -9,9 +9,7 @@ public class TARNativeInterface {
 
     public static native void nativeInit(String calibPath);
     public static native void nativeDestroy();
-    public static native void nativeInitGL();
-    public static native void nativeResize(int w, int h);
-    public static native void nativeRender();
+    public static native void nativeStart();
     public static native void nativeKey(int keycode);
     public static native float[] nativeGetIntrinsics();
     public static native int[] nativeGetResolution();
