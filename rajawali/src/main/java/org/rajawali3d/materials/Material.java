@@ -780,8 +780,6 @@ public class Material {
      * @return
      */
     private int createProgram(String vertexSource, String fragmentSource) {
-        Log.e("felixslu","vertexSource : "+ vertexSource);
-        Log.e("felixslu","fragmentSource : "+ fragmentSource);
         mVShaderHandle = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource);
         if (mVShaderHandle == 0) {
             return 0;
