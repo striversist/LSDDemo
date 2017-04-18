@@ -13,6 +13,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import org.rajawali3d.renderer.Renderer;
 import org.rajawali3d.view.ISurface;
@@ -30,6 +31,7 @@ public class MainActivity extends AppCompatActivity implements LSDRenderer.Rende
 
     public static final String TAG = MainActivity.class.getSimpleName();
 
+    private static VideoSource sVideoSource;
     private String          mfileDir;
     private RelativeLayout  mLayout;
     private SurfaceView     mRajawaliSurface;
@@ -71,7 +73,11 @@ public class MainActivity extends AppCompatActivity implements LSDRenderer.Rende
         mLayout.addView(mImageView, imageParams);
         mResolution = TARNativeInterface.nativeGetResolution();
 
+        sVideoSource = new VideoSource(this, mResolution[0], mResolution[1]);
+        sVideoSource.start();
+
         setContentView(mLayout);
+        Toast.makeText(this, "请对准目标按下音量(+)", Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -80,6 +86,14 @@ public class MainActivity extends AppCompatActivity implements LSDRenderer.Rende
             TARNativeInterface.nativeDestroy();
             finish();
             System.exit(0);
+        } else if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            Toast.makeText(this, "Start", Toast.LENGTH_SHORT).show();
+            TARNativeInterface.nativeStart();
+            return true;
+        } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            // TODO: reset
+            Toast.makeText(this, "Reset!", Toast.LENGTH_SHORT).show();
+            return true;
         }
         return true;
     }
@@ -112,14 +126,20 @@ public class MainActivity extends AppCompatActivity implements LSDRenderer.Rende
         final byte[] rawData = TARNativeInterface.nativeGetCurrentImage(0);
         if (rawData == null)
             return;
+
+        final Bitmap bm = Bitmap.createBitmap(mResolution[0], mResolution[1], Bitmap.Config.ARGB_8888);
+        bm.copyPixelsFromBuffer(ByteBuffer.wrap(rawData));
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Bitmap bm = Bitmap.createBitmap(mResolution[0], mResolution[1], Bitmap.Config.ARGB_8888);
-                bm.copyPixelsFromBuffer(ByteBuffer.wrap(rawData));
                 mImageView.setImageBitmap(bm);
             }
         });
+    }
+
+    // Call from JNI
+    public static VideoSource getVideoSource() {
+        return sVideoSource;
     }
 
     public static void copyAssets(Context context, String dir) {

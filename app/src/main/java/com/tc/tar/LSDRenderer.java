@@ -53,7 +53,6 @@ public class LSDRenderer extends Renderer {
 
     @Override
     protected void initScene() {
-        TARNativeInterface.nativeStart();
         intrinsics = TARNativeInterface.nativeGetIntrinsics();
         resolution = TARNativeInterface.nativeGetResolution();
 
