@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity implements LSDRenderer.Rende
     private Renderer        mRenderer;
     private ImageView       mImageView;
     private int[]           mResolution;
+    private boolean         mStarted = false;
 
     static {
         System.loadLibrary("g2o_core");
@@ -88,6 +89,7 @@ public class MainActivity extends AppCompatActivity implements LSDRenderer.Rende
             System.exit(0);
         } else if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
             Toast.makeText(this, "Start", Toast.LENGTH_SHORT).show();
+            mStarted = true;
             TARNativeInterface.nativeStart();
             return true;
         } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
@@ -123,12 +125,28 @@ public class MainActivity extends AppCompatActivity implements LSDRenderer.Rende
     public void onRender() {
         if (mImageView == null)
             return;
-        final byte[] rawData = TARNativeInterface.nativeGetCurrentImage(0);
-        if (rawData == null)
+
+        byte[] imgData;
+        if (!mStarted) {
+            byte[] frameData = sVideoSource.getFrame();     // YUV data
+            if (frameData == null)
+                return;
+            imgData = new byte[mResolution[0] * mResolution[1] * 4];
+            for (int i = 0; i < imgData.length / 4; ++i) {
+                imgData[i * 4] = frameData[i];
+                imgData[i * 4 + 1] = frameData[i];
+                imgData[i * 4 + 2] = frameData[i];
+                imgData[i * 4 + 3] = (byte) 0xff;
+            }
+        } else {
+            imgData = TARNativeInterface.nativeGetCurrentImage(0);
+        }
+
+        if (imgData == null)
             return;
 
         final Bitmap bm = Bitmap.createBitmap(mResolution[0], mResolution[1], Bitmap.Config.ARGB_8888);
-        bm.copyPixelsFromBuffer(ByteBuffer.wrap(rawData));
+        bm.copyPixelsFromBuffer(ByteBuffer.wrap(imgData));
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
